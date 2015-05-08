@@ -163,6 +163,7 @@ bool robot::comportamiento::_realizarRutina(char rutina){
 void robot::comportamiento::escuchar(){
   char c;
   bool salir = false;
+  
   while(Serial.available() > 0 && !salir){
     c = Serial.read();
     if(comando[0] != delimitador_i){
@@ -288,9 +289,8 @@ void robot::comportamiento::ejecutarComando(String comando){
 
 void  robot::comportamiento::enviarMensaje(String mensaje){
   String envio = delimitador_i + mensaje + delimitador_f;
-  Serial.println(envio);
+  Serial.print(envio);
 }
-
 void robot::comportamiento::excepcion(int distancia, unsigned int lectura_sensor_1, unsigned int lectura_sensor_2){
   if(activar_excepcion[sensor_ultras]){
       if(distancia > MUY_CERCA)
