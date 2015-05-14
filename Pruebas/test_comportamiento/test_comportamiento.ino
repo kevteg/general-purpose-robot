@@ -23,13 +23,13 @@
 #define sensori_d 3
 #define velocidad 100
 #define maxdistancia_ult 100
-#define nombre_robot 'A' //A es Ocho, B es Póker
+#define nombre_r 'A' //A es Ocho, B es Póker
 
 
 #include <conducta.h>
 using namespace robot;
 
-comportamiento Robot(nombre_robot, puertom_d, puertom_i, velocidad, pin_trigger, pin_echo, maxdistancia_ult, sensori_d, sensori_i);
+comportamiento Robot(nombre_r, puertom_d, puertom_i, velocidad, pin_trigger, pin_echo, maxdistancia_ult, sensori_d, sensori_i);
 
 void setup(){
   //Serial.begin(9600);

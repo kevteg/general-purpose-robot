@@ -27,10 +27,12 @@
 #define t_espera_min              5    //Tiempo de espera minimo para cualquier rutina
 #define t_espera_max              20   //Tiempo de espera máximo para cualquier rutina
 #define seg                       1000 //1 segundo (1000 ms)
+#define t_envio                   0.5  //Tiempo de envio de mensajes, medio segundo cada mensaje
+#define num_envios_per            3    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
 #define led_verde                 18   //Puerto del led verde
 #define led_rojo                  19   //Puerto del led rojo
-#define todos_leds                0   //Indica que todos los leds están encedidos
-#define ningun_led                -1    //Indica que no esta encendido ningún led, estado inicial
+#define todos_leds                0    //Indica que todos los leds están encedidos
+#define ningun_led                -1   //Indica que no esta encendido ningún led, estado inicial
 #define numero_sensores_ir        2    //Número de sensores infrarojos del robot por defecto
 #define numero_leds               2    //Número de leds del robot por defecto
 #define sensor_ir_izq             0    //Posición del sensor ir de la izquierda en el vector de lecturas
@@ -51,12 +53,13 @@
 #define delimitador_i             '<'  //Delimitador inicial de mensajes
 #define delimitador_f             '>'  //Delimitaador final de mensajes
 #define separador                 ':'  //Separador de los mensajes
-#define excep_dist                '1'  //Mensaje de error en caso de generarse una excepción de distancia
-#define excep_infra               '2'  //Mensaje de error en caso de generarse una excepción de sensores
+#define excep_dist                '0'  //Mensaje de error en caso de generarse una excepción de distancia
+#define excep_infra               '1'  //Mensaje de error en caso de generarse una excepción de sensores
 #define error_comando             '_'  //Comando no reconocido (el robot lo envia)
 #define set_excepcion             'E'  //Para apagar las excepciones
 #define error_excep               '/'  //Sucede cuando el robot no puede apagar la excepcion (el robot lo envia)
 #define mensaje_recibido          '#'  //El robot lo envia cuando ha recibido correctamente una orden
+
  namespace robot{
     class comportamiento{
 		private:
@@ -99,6 +102,7 @@
       int led_encendido;              //Led encendido actualmente
       int cambio_movimiento_eva;      //Tiempo en el cual se cambia el movimiento en la rutina de evadir obstaculos
 			int cambio_rutina_vag;          //Tiempo en el cual se cambia el movimiento en la rutina de vagar
+      int *n_veces_exc;               //Número de veces seguidas que ha se ha enviado la excepción
       estado_m estado_movimiento;
 			estado_r estado_robot;
       bool *_excepcion_sensor;        //Excepciones

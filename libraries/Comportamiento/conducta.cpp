@@ -11,14 +11,16 @@ promedio_distancia(max_distan_us), sensor_infrarojo(pin_sir1, pin_sir2), nombre_
   digitalWrite(led_verde, LOW);
   digitalWrite(led_rojo, LOW);
   led_encendido = ningun_led;
+  n_veces_exc[i]    = new int[numero_excepciones];
   _excepcion_sensor = new bool[numero_excepciones];
   activar_excepcion = new bool[numero_excepciones];
   for(int i = 0; i < numero_excepciones; i++){
+    n_veces_exc = 0;
     _excepcion_sensor[i] = false;
     activar_excepcion[i] = true; //Por defecto las excepciones están encendidas
   }
   robot_calibrado = false;
-  estado_ini_r = e_vagar; //Por defecto esta vagar al menos que se indique lo contrario al iniciar el robot
+  estado_ini_r = e_esperando; //Por defecto al menos que se indique lo contrario al iniciar el robot
 }
 
 robot::comportamiento::comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int trigger_pin, int echo_pin, int pin_sir1, int pin_sir2) :
@@ -33,18 +35,20 @@ promedio_distancia(max_distancia_ultrasonido), sensor_infrarojo(pin_sir1, pin_si
   digitalWrite(led_verde, LOW);
   digitalWrite(led_rojo, LOW);
   led_encendido = ningun_led;
+  n_veces_exc       = new int[numero_excepciones];
   _excepcion_sensor = new bool[numero_excepciones];
   activar_excepcion = new bool[numero_excepciones];
   for(int i = 0; i < numero_excepciones; i++){
+    n_veces_exc[i] = 0;
     _excepcion_sensor[i] = false;
     activar_excepcion[i] = true; //Por defecto las excepciones están encendidas
   }
   robot_calibrado = false;
-  estado_ini_r = e_vagar; //Por defecto esta vagar al menos que se indique lo contrario al iniciar el robot
+  estado_ini_r = e_esperando; //Por defecto al menos que se indique lo contrario al iniciar el robot
 }
 
 void robot::comportamiento::inicializar(){
-  cambiarComportamiento(e_esperando);
+  cambiarComportamiento(e_calibrar);
   Serial.begin(baudios);
 }
 
@@ -52,13 +56,18 @@ void robot::comportamiento::run(){
   unsigned long tiempo_actual;
   unsigned int lectura_sensores_ir[numero_sensores_ir];
   unsigned long tiempo_transcurrido;
+  int distancia;
+  unsigned int posicion;
 
-  int distancia = promedio_distancia.add(sensor_ultra.getDistance());
   //Las excepeciones no estan activas hasta que el robot este calibrado
   if(robot_calibrado){
-    unsigned int posicion = sensor_infrarojo.lectura(); //Posición de una linea relativo al sensor ir
-    for(int i = 0; i < numero_sensores_ir; i++)
-      lectura_sensores_ir[i] = sensor_infrarojo.valorSensor(i);
+    if(activar_excepcion[sensor_ultras])
+      distancia = promedio_distancia.add(sensor_ultra.getDistance());
+    if(activar_excepcion[sensor_infrar]){
+      posicion = sensor_infrarojo.lectura(); //Posición de una linea relativo al sensor ir
+      for(int i = 0; i < numero_sensores_ir; i++)
+        lectura_sensores_ir[i] = sensor_infrarojo.valorSensor(i);
+    }
     excepcion(distancia, lectura_sensores_ir[sensor_ir_izq], lectura_sensores_ir[sensor_ir_der]);
   }
   escuchar();
@@ -163,7 +172,7 @@ bool robot::comportamiento::_realizarRutina(char rutina){
 void robot::comportamiento::escuchar(){
   char c;
   bool salir = false;
-  
+
   while(Serial.available() > 0 && !salir){
     c = Serial.read();
     if(comando[0] != delimitador_i){
@@ -215,7 +224,7 @@ void robot::comportamiento::ejecutarComando(String comando){
         if(comando[4] == separador )
           mens_correcto = _realizarRutina(comando[5]);
         else
-          mens_correcto = true;
+          mens_correcto = cambiarMovimiento(e_detenido);
         break;
       }
       case esperar:{
@@ -229,28 +238,45 @@ void robot::comportamiento::ejecutarComando(String comando){
             else
               cambiarComportamiento(e_esperando);
         }
-
         break;
       }
-
       case buscar:{
         mens_correcto = true;
         String mensa;
         switch(estado_robot){
           case e_esperando:
-            mensa = (String)nombre_robot + (String)separador + (String)esperar;
+            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)esperar;
           break;
           case e_evasion:
-            mensa = (String)nombre_robot + (String)separador + (String)evadir;
+            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)evadir;
           break;
           case e_vagar:
-            mensa = (String)nombre_robot + (String)separador + (String)vagar;
+            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)vagar;
           break;
-          case e_rutina:
-            mensa = (String)nombre_robot + (String)separador + (String)seguir_i;
+          case e_rutina:{
+            char mov;
+            switch(estado_movimiento){
+              case e_avanza:
+                mov = '1';
+              break;
+              case e_atras:
+                mov = '2';
+              break;
+              case e_vuelta_d:
+                mov = '3';
+              break;
+              case e_vuelta_i:
+                mov = '4';
+              break;
+              case e_detenido:
+                mov = esperar;
+              break;
+            }
+            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)seguir_i + (String)mov;
           break;
+          }
           case e_calibrar:
-            mensa = (String)nombre_robot + (String)separador + (String)calibra;
+            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)calibra;
           break;
         }
         enviarMensaje(mensa);
@@ -262,14 +288,11 @@ void robot::comportamiento::ejecutarComando(String comando){
             case excep_dist:
               mens_correcto = true;
               activar_excepcion[sensor_ultras] = (comando[7] == '1')?true:false;
-
             break;
             case excep_infra:
               mens_correcto = true;
               activar_excepcion[sensor_infrar] = (comando[7] == '1')?true:false;
-
             break;
-
             default:
               enviarMensaje((String)nombre_robot +(String)separador + (String)error_comando);
             break;
@@ -278,12 +301,17 @@ void robot::comportamiento::ejecutarComando(String comando){
           enviarMensaje((String)nombre_robot + (String)separador + (String)error_excep + (String)separador);
       break;
       }
-      default :
-        enviarMensaje((String)nombre_robot + (String)separador + (String)error_comando);
-      break;
+
     }
-    if(mens_correcto && comando[3] != buscar) // ya en buscar se envio una confirmacion
-      enviarMensaje((String)nombre_robot + (String)separador + (String)mensaje_recibido);
+    /*Por ahora no habran confirmaciones*/
+    /*Si el comando esta mal deberia indicarse*/
+
+    /*if(mens_correcto){
+      if(comando[3] != buscar) // ya en buscar se envio una confirmacion
+        enviarMensaje((String)nombre_robot + (String)separador + (String)mensaje_recibido);
+    }else
+      enviarMensaje((String)nombre_robot + (String)separador + (String)error_comando);
+    */
   }
 }
 
@@ -295,9 +323,16 @@ void robot::comportamiento::excepcion(int distancia, unsigned int lectura_sensor
   if(activar_excepcion[sensor_ultras]){
       if(distancia > MUY_CERCA)
         _excepcion_sensor[sensor_ultras] = false;
+        if(n_veces_exc[sensor_ultras] > 0){
+          n_veces_exc[sensor_ultras]--;
+          enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_dist + (String)separador + (String)'0');
+        }
       else{
         _excepcion_sensor[sensor_ultras] = true;
-        enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_dist);
+        if(n_veces_exc[sensor_ultras] < num_envios_per){
+          n_veces_exc[sensor_ultras]++;
+          enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_dist + (String)separador + (String)'1');
+        }
       }
   }else
     _excepcion_sensor[sensor_ultras] = false;
@@ -305,9 +340,17 @@ void robot::comportamiento::excepcion(int distancia, unsigned int lectura_sensor
   if(activar_excepcion[sensor_infrar]){
       if(lectura_sensor_1 > umbral_lectura_ir|| lectura_sensor_2 > umbral_lectura_ir){
         _excepcion_sensor[sensor_infrar] = true;
-        enviarMensaje((String)nombre_robot + (String)separador+ (String)set_excepcion + (String)separador  + (String)excep_infra);
-      }else if(lectura_sensor_1 <= umbral_lectura_ir && lectura_sensor_2 <= umbral_lectura_ir)
+        if(n_veces_exc[sensor_infrar] < num_envios_per){
+          n_veces_exc[sensor_infrar]++;
+          enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_infra + (String)separador + (String)'1');
+        }
+      }else if(lectura_sensor_1 <= umbral_lectura_ir && lectura_sensor_2 <= umbral_lectura_ir){
         _excepcion_sensor[sensor_infrar] = false;
+        if(n_veces_exc[sensor_infrar] > 0){
+          n_veces_exc[sensor_infrar]--;
+          enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_infra + (String)separador + (String)'0');
+        }
+      }
   }else
     _excepcion_sensor[sensor_infrar] = false;
 
@@ -344,6 +387,7 @@ void robot::comportamiento::_vagar(){
     }
   }
 }
+
 void robot::comportamiento::cambiarComportamiento(estado_r nuevo_estado){
   if(led_encendido == led_rojo || led_encendido == todos_leds || (led_encendido == ningun_led && robot_calibrado) || nuevo_estado == e_calibrar)
     cambioLed();

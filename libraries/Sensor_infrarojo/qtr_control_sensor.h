@@ -6,14 +6,15 @@
 
 #ifndef ROBOT_QTR_SENSOR_H_
 #define ROBOT_QTR_SENSOR_H_
-#define NUM_SENSORS 2 
+#define NUM_SENSORS 2
 
 #include <QTRSensors.h>
 namespace robot{
 	class qtr_sensor{
 		private:
-			QTRSensorsAnalog qtra;
+			QTRSensorsAnalog _qtra;
 			unsigned int sensor_values[NUM_SENSORS];
+
 		public:
 			/**
 			 * @brief Primer constructor de la clase.
@@ -37,5 +38,5 @@ namespace robot{
 			 */
 			  unsigned int valorSensor(int index);
 		};
-};		
+};
 #endif
