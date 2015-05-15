@@ -12,7 +12,7 @@
 namespace robot{
 	class qtr_sensor{
 		private:
-			QTRSensorsAnalog _qtra;
+			QTRSensorsAnalog *_qtra;
 			unsigned int sensor_values[NUM_SENSORS];
 
 		public:

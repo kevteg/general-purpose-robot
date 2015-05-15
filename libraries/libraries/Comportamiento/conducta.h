@@ -28,7 +28,7 @@
 #define t_espera_max              20   //Tiempo de espera máximo para cualquier rutina
 #define seg                       1000 //1 segundo (1000 ms)
 #define t_envio                   0.5  //Tiempo de envio de mensajes, medio segundo cada mensaje
-#define num_envios_per            3    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
+#define num_envios_per            5    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
 #define led_verde                 18   //Puerto del led verde
 #define led_rojo                  19   //Puerto del led rojo
 #define todos_leds                0    //Indica que todos los leds están encedidos
