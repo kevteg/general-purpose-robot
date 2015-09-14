@@ -424,23 +424,28 @@ void robot::comportamiento::cambiarComportamiento(estado_r nuevo_estado){
   	case e_esperando:
   		cambiarMovimiento(e_detenido);
   		estado_robot = e_esperando;
+      enviarComportamiento();
   	break;
   	case e_seguir:
   		estado_robot = e_seguir;
+      enviarComportamiento();
   	break;
   	case e_evasion:
       tiempo_inicio = millis();
   		tipo_evasion = rand() % 3;
   		cambiarMovimiento(e_avanza);
   		estado_robot = e_evasion;
+      enviarComportamiento();
   	break;
     case e_vagar:
       tiempo_inicio = millis();
       cambiarMovimiento(e_avanza);
       estado_robot = e_vagar;
+      enviarComportamiento();
     break;
   	case e_rutina:
   		estado_robot = e_rutina;
+      enviarComportamiento();
   	break;
     case e_calibrar:
       tiempo_inicio = millis();
@@ -449,6 +454,7 @@ void robot::comportamiento::cambiarComportamiento(estado_r nuevo_estado){
       estado_robot = e_calibrar;
     break;
   }
+
 }
 void robot::comportamiento::_evasionObstaculos(){
   /*Evasión 3.0*/
@@ -486,8 +492,12 @@ if(estado_movimiento != e_detenido)
 		break;
 	}
 }
+void robot::comportamiento::enviarComportamiento(){
+  String comando = (String)delimitador_i + (String)nombre_robot + (String)separador + (String)buscar + (String)delimitador_f;
+  ejecutarComando(comando);
+}
 void robot::comportamiento::cambiarVel(int opc_1, int opc_2){
-  //Nueva velocidad va de 55 a 24a5
+  //Nueva velocidad va de 55 a 245
   int nueva_velocidad = velocidad_minima + (opc_2 + opc_1*10)*10;
   movimiento.setVelocidad(nueva_velocidad);
 }

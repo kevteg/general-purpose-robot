@@ -207,6 +207,12 @@
        */
       void cambiarVel(int opc_1, int opc_2);
       /**
+       * @brief Envia que comportamiento tiene el robot en el momento, se usa cuando el robot cambia su comportamiento
+       *        Ej: Explorar->Esperar
+       */
+      void enviarComportamiento();
+
+      /**
       * @brief actualizar el estado del robot según la lectura del sensor de ultrasonido o según lo que reciba por el xBee
       * 		  debe ser llamado repetidamente
       */
