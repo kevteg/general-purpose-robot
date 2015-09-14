@@ -23,7 +23,8 @@
 /*Definiciones*/
 #define MUY_CERCA                 15   //Distancia en cm
 #define max_distancia_ultrasonido 100  //Máxima distancia por defecto del ultrasonido en cm
-#define velocidad_defecto_motores 100  //Máxima velocidad por defecto de los motores
+#define velocidad_defecto_motores 105  //Máxima velocidad por defecto de los motores
+#define velocidad_minima          55   //Velocidad minima
 #define t_espera_min              5    //Tiempo de espera minimo para cualquier rutina
 #define t_espera_max              20   //Tiempo de espera máximo para cualquier rutina
 #define seg                       1000 //1 segundo (1000 ms)
@@ -59,6 +60,7 @@
 #define set_excepcion             'E'  //Para apagar las excepciones
 #define error_excep               '/'  //Sucede cuando el robot no puede apagar la excepcion (el robot lo envia)
 #define mensaje_recibido          '#'  //El robot lo envia cuando ha recibido correctamente una orden
+#define velocidad                 'V'  //Velocidad del robot
 
  namespace robot{
     class comportamiento{
@@ -198,6 +200,12 @@
       * @brief Cambiar el estado de los leds, apaga el led que este encendido y enciende el otro
       */
       void cambioLed();
+      /**
+       * @brief Cambia la velocidad a la nueva que llega al robot
+       *@param opc_1 primera opción de cambio de velocidad
+       *       opc_2 segunda opción de cambio de velocidad
+       */
+      void cambiarVel(int opc_1, int opc_2);
       /**
       * @brief actualizar el estado del robot según la lectura del sensor de ultrasonido o según lo que reciba por el xBee
       * 		  debe ser llamado repetidamente

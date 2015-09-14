@@ -21,6 +21,14 @@ namespace robot{
 			int pin_derecho;
 			int pin_izquierdo;
 			int velocidad;
+			enum movimientos{
+							mov_adelante,
+							mov_atras,
+							mov_derecha,
+							mov_izquierda,
+							mov_detener
+			};
+			movimientos ult_mov;
 		public:
 			/**
 			 * @brief Primer constructor de la clase.
@@ -40,28 +48,28 @@ namespace robot{
 			/**
 			 * @brief Dirección: derecha.
 			 * 		  Motor derecho hacia atrás y motor izquierdo hacia adelante
-			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo 
+			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene girando hasta recibir otra orden
 			 */
 			void derecha();
 			/**
 			 * @brief Dirección: izquierda.
 			 * 		  Motor derecho hacia adelante y motor izquierdo hacia atrás
-			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo 
+			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene girando hasta recibir otra orden
 			 */
 			void izquierda();
 			/**
 			 * @brief Dirección: adelante.
 			 * 		  Motor derecho hacia adelante y motor izquierdo hacia adelante
-			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo 
+			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene yendo al frente hasta recibir otra orden
 			 */
 			void adelante();
 			/**
 			 * @brief Dirección: atrás.
 			 * 		  Motor derecho hacia atrás y motor izquierdo hacia atrás
-			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo 
+			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene yendo atrás hasta recibir otra orden
 			 */
 			void atras();

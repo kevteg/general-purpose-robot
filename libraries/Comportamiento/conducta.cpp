@@ -226,8 +226,8 @@ void robot::comportamiento::ejecutarComando(String comando){
         if(comando[4] == separador )
           mens_correcto = _realizarRutina(comando[5]);
         else
-          mens_correcto = true;
           cambiarMovimiento(e_detenido);
+          mens_correcto = true;
         break;
       }
       case esperar:{
@@ -271,11 +271,14 @@ void robot::comportamiento::ejecutarComando(String comando){
               case e_vuelta_i:
                 mov = '4';
               break;
-              case e_detenido:
+              default:
                 mov = esperar;
               break;
             }
-            mensa = (String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)seguir_i + (String)mov;
+
+            mensa = (mov != esperar)?
+            ((String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)seguir_i + (String)separador + (String)mov):
+            ((String)nombre_robot + (String)separador + (String)buscar + (String)separador + (String)seguir_i);
           break;
           }
           case e_calibrar:
@@ -303,6 +306,14 @@ void robot::comportamiento::ejecutarComando(String comando){
         }else
           enviarMensaje((String)nombre_robot + (String)separador + (String)error_excep + (String)separador);
       break;
+      }
+      case velocidad:{
+        //<X:V:[0, 1]:[0, 9]>
+        int opc_1, opc_2;
+        opc_1 = comando[5] - 48;
+        opc_2 = comando[7] - 48;
+        if(opc_1 >= 0 && opc_1 <= 2 && opc_2 >= 0 && opc_2 <= 9)
+          cambiarVel(opc_1, opc_2);
       }
 
     }
@@ -474,4 +485,9 @@ if(estado_movimiento != e_detenido)
 			}
 		break;
 	}
+}
+void robot::comportamiento::cambiarVel(int opc_1, int opc_2){
+  //Nueva velocidad va de 55 a 24a5
+  int nueva_velocidad = velocidad_minima + (opc_2 + opc_1*10)*10;
+  movimiento.setVelocidad(nueva_velocidad);
 }

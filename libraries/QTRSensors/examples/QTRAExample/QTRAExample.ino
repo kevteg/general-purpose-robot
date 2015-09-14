@@ -28,12 +28,12 @@
 // last seen by sensor 5 before being lost.
 
 
-#define NUM_SENSORS             6  // number of sensors used
+#define NUM_SENSORS             2  // number of sensors used
 #define NUM_SAMPLES_PER_SENSOR  4  // average 4 analog samples per sensor reading
 #define EMITTER_PIN             2  // emitter is controlled by digital pin 2
 
 // sensors 0 through 5 are connected to analog inputs 0 through 5, respectively
-QTRSensorsAnalog qtra((unsigned char[]) {0, 1, 2, 3, 4, 5}, 
+QTRSensorsAnalog qtra((unsigned char[]) {2, 3}, 
   NUM_SENSORS, NUM_SAMPLES_PER_SENSOR, EMITTER_PIN);
 unsigned int sensorValues[NUM_SENSORS];
 
