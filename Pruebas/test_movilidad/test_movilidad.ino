@@ -3,8 +3,8 @@
 #include <control_motor.h>
 #include <movimiento.h>
 
-#define puertoDerecho 3
-#define puertoIzquierdo 4
+#define puertoDerecho 1
+#define puertoIzquierdo 2
 #define velocidad 55
 
 using namespace robot;

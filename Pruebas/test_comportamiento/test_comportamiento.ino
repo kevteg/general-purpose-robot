@@ -15,15 +15,15 @@
 
 #include <promedio.h>
 
-#define puertom_d 3
-#define puertom_i 4
+#define puertom_d 1
+#define puertom_i 2
 #define pin_trigger 14
 #define pin_echo 15
-#define sensori_i 2
-#define sensori_d 3
+#define sensori_i 3
+#define sensori_d 4
 #define velocidad 100
 #define maxdistancia_ult 100
-#define nombre_r 'A' //A es Ocho, B es Póker
+#define nombre_r 'B' //A es Ocho, B es Póker
 
 
 #include <conducta.h>
@@ -38,8 +38,6 @@ void setup(){
 void loop(){
   //String a = (String)delimitador_i;
   //String b = (String)delimitador_f;
-  
- 
    Robot.run();
 }
 
