@@ -1,30 +1,15 @@
 #include "movimiento.h"
-robot::movilidad::movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derecho, int pin_en_izquierdo) :
- motor_derecho(pin_derecho), motor_izquierdo(pin_izquierdo){
-	this->pin_derecho = pin_derecho;
-	this->pin_izquierdo = pin_izquierdo;
-  this->pin_en_derecho = pin_en_derecho;
-	this->pin_en_izquierdo = pin_en_izquierdo;
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
-	setVelocidad(minVelo);
-  detener();
-}
 
 robot::movilidad::movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derecho, int pin_en_izquierdo, int velocidad) :
- motor_derecho(pin_derecho, velocidad), motor_izquierdo(pin_izquierdo, velocidad){
-	this->pin_derecho = pin_derecho;
-	this->pin_izquierdo = pin_izquierdo;
-  this->pin_en_derecho = pin_en_derecho;
-	this->pin_en_izquierdo = pin_en_izquierdo;
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
-	setVelocidad(velocidad);
+ motor_derecho(pin_derecho),
+ motor_izquierdo(pin_izquierdo),
+ pin_en_derecho(pin_en_derecho),
+pin_en_izquierdo(pin_en_izquierdo){
+  Kp = 0.5;
+  Kd = 0.5;
+  Ki = 0.5;
   detener();
+  setVelocidad(velocidad);
 }
 void robot::movilidad::activarSensores(){
   pinMode(pin_en_derecho, OUTPUT);    // make line an output
@@ -39,68 +24,75 @@ void robot::movilidad::activarSensores(){
   tiempo_ini_en_der = micros();
   tiempo_ini_en_izq = micros();
 }
-void robot::movilidad::verificarVelocidades(){
+void robot::movilidad::conteoRevoluciones(){
     if(ult_mov != mov_detener){
       if(tiempo_en_der){
         if(tiempo_en_der > min_v_blanco_en_der && tiempo_en_der < max_v_blanco_en_der && !v){
-            n++;
-           v = true;
+            conteo_der++;
+           v = 1;
         }else if(tiempo_en_der > min_v_negro_en_der && tiempo_en_der < max_v_negro_en_der && v)
-           v = false;
-        //Serial.println(tiempo_en_der);
+           v = 0;
         tiempo_en_der = 0;
       }
 
       if(tiempo_en_izq){
         if(tiempo_en_izq > min_v_blanco_en_izq && tiempo_en_izq < max_v_blanco_en_izq && !v1){
-           n1++;
-           v1 = true;
-        }else if(tiempo_en_izq > min_v_negro_en_izq && tiempo_en_izq < max_v_negro_en_izq && v)
-           v1 = false;
-        //Serial.println(tiempo_en_izq);
+           conteo_izq++;
+           v1 = 1;
+        }else if(tiempo_en_izq > min_v_negro_en_izq && tiempo_en_izq < max_v_negro_en_izq && v1)
+           v1 = 0;
         tiempo_en_izq = 0;
       }
-
-      double di_d = (c_movimiento*n) / 6;
-      double di_i = (c_movimiento*n1) / 6;
-      tiempo = millis() - tiempo_inicio;
-      double v_d = di_d / (tiempo / 1000);
-      double v_i = di_i / (tiempo / 1000);
-      tiempo_v = millis() - tiempo_inicio_v;
-      if(tiempo_v > 1000)
-        rectificacion(v_d, v_i);
-      Serial.print(v_d);
-      Serial.print(" ");
-      Serial.print(v_i);
-      Serial.println(" cm / s derecha e izquierda");
     }
 }
-void robot::movilidad::rectificacion(double v_r_der, double v_r_izq){
-  int p = 5;
-  if(abs(v_r_der - v_r_izq) > 1){
-  Serial.print("Entro");
-    if(v_r_der > v_r_izq){
-      Serial.println(" 1");
-      //int p = (static_cast<int>((100*v_r_izq)/v_r_der)) / 50;
+void robot::movilidad::proceso(){
 
-      vel_izq += (vel_izq + p <= 255)?p:0;
-      vel_der -= (vel_der - p >= 55)?p:0;
-      Serial.print(vel_der);
-      Serial.print(" ");
-      Serial.println(vel_izq);
-    }else{
-      Serial.println(" 2");
-      //int p = (static_cast<int>((100*v_r_der)/v_r_izq)) / 50;
+  if(ult_mov != mov_detener){
+    double* velocidades = calculoVelocidad();
+    tiempo_v = millis() - tiempo_inicio_v;
+    if(tiempo_v > tiempo_verificacion){
 
-      vel_der += (vel_der + p <= 255)?p:0;
-      vel_izq -= (vel_izq - p >= 55)?p:0;
-      Serial.print(vel_der);
+
+      pwm_der = updatePid(pwm_der, velocidad_requerida, velocidades[0], &last_error_d, &integral_d);
+      pwm_izq = updatePid(pwm_izq, velocidad_requerida, velocidades[1], &last_error_i, &integral_i);
+
+      Serial.print("----------------------------------------------------------------");
+      Serial.print(pwm_der);
       Serial.print(" ");
-      Serial.println(vel_izq);
+      Serial.println(pwm_izq);
+
+      actMov();
+      tiempo_inicio_v = millis();
     }
-    actMov();
   }
-  tiempo_inicio_v = millis();
+}
+double* robot::movilidad::calculoVelocidad(){
+  double velocidades[2];
+  tiempo = millis() - tiempo_inicio;
+  velocidades[0] =  ((c_movimiento / altos_rueda)*conteo_der) / ((tiempo) / double(1000));
+  velocidades[1] =   ((c_movimiento / altos_rueda)*conteo_izq) / ((tiempo) / double(1000));
+
+  Serial.print(  velocidades[0]);
+  Serial.print(" ");
+  Serial.println(  velocidades[1]);
+
+
+//  conteo_der = 0;
+//  conteo_izq = 0;
+  return velocidades;
+}
+int robot::movilidad::updatePid(int pwm_act, int vel_req, double vel_act, double* last_error, double *integral){
+  float term_pid = 0;                                                           
+  double error=0;
+  error = static_cast<double>(vel_req) - vel_act;
+  //Control Pid
+  *integral += Ki*(error*(tiempo_verificacion / 1000));
+  term_pid = (Kp * error)
+            + *integral
+            + ((Kd/(tiempo_verificacion / 1000)) * (error - *last_error));
+
+  *last_error = error;
+  return constrain(pwm_act + int(term_pid), 55, 255);
 }
 void robot::movilidad::conteo_en_der() {
   tiempo_en_der = micros() - tiempo_ini_en_der;
@@ -111,76 +103,76 @@ void robot::movilidad::conteo_en_izq() {
 }
 
 void robot::movilidad::derecha(){
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+  conteo_der = 0;
+  conteo_izq = 0;
+  v = 2;
+  v1 = 2;
+  pwm_der = 0;
+  pwm_izq = 0;
   tiempo_inicio_v = millis();
   tiempo_inicio = millis();
   ult_mov = mov_derecha;
-  vel_der = velocidad;
-  vel_izq = velocidad;
   actMov();
 }
 
 void robot::movilidad::izquierda(){
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+  conteo_der = 0;
+  conteo_izq = 0;
+  v = 2;
+  v1 = 2;
+  pwm_der = 0;
+  pwm_izq = 0;
   tiempo_inicio_v = millis();
   tiempo_inicio = millis();
   ult_mov = mov_izquierda;
-  vel_der = velocidad;
-  vel_izq = velocidad;
   actMov();
 }
 
 void robot::movilidad::adelante(){
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+  conteo_der = 0;
+  conteo_izq = 0;
+  v = 2;
+  v1 = 2;
+  last_error_d = 0;
+  last_error_i = 0;
+  integral_d = 0;
+  integral_i = 0;
+  pwm_der = 0;
+  pwm_izq = 0;
   tiempo_inicio_v = millis();
   tiempo_inicio = millis();
   ult_mov = mov_adelante;
-  //vel_der = velocidad;
-  //vel_izq = velocidad;
   actMov();
-
 }
 
 void robot::movilidad::atras(){
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+  conteo_der = 0;
+  conteo_izq = 0;
+  v = 2;
+  v1 = 2;
+  pwm_der = 0;
+  pwm_izq = 0;
   tiempo_inicio_v = millis();
   tiempo_inicio = millis();
   ult_mov = mov_atras;
-  vel_der = velocidad;
-  vel_izq = velocidad;
+
   actMov();
 }
 
 void robot::movilidad::detener(){
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+  conteo_der = 0;
+  conteo_izq = 0;
+  v = 2;
+  v1 = 2;
   ult_mov = mov_detener;
-  //vel_der = velocidad;
-  //vel_izq = velocidad;
   actMov();
-
 }
 
 void robot::movilidad::actMov(){
-  int vel_d = (ult_mov != mov_detener)?((ult_mov == mov_adelante || ult_mov == mov_izquierda)?vel_der:-vel_der):noVelocidad;
-  int vel_i = (ult_mov != mov_detener)?((ult_mov == mov_adelante || ult_mov == mov_derecha)?vel_izq:-vel_izq):noVelocidad;
-
-  motor_derecho.setSpeed(vel_d);
-  motor_izquierdo.setSpeed(vel_i);
+  int pwm_d = (ult_mov != mov_detener)?((ult_mov == mov_adelante || ult_mov == mov_izquierda)?pwm_der:-pwm_der):zero_pwm;
+  int pwm_i = (ult_mov != mov_detener)?((ult_mov == mov_adelante || ult_mov == mov_derecha)?pwm_izq:-pwm_izq):zero_pwm;
+  motor_izquierdo.setSpeed(pwm_i);
+  motor_derecho.setSpeed(pwm_d);
 }
 
 int robot::movilidad::getPinEnDer(){
@@ -189,15 +181,36 @@ int robot::movilidad::getPinEnDer(){
 int robot::movilidad::getPinEnIzq(){
   return pin_en_izquierdo;
 }
+double robot::movilidad::getKp(){
+  return Kp;
+}
+double robot::movilidad::getKi(){
+  return Ki;
+}
+double robot::movilidad::getKd(){
+  return Kd;
+}
+void robot::movilidad::setKp(double Kp){
+  if(Kp > 0)
+    this->Kp = Kp;
+}
+void robot::movilidad::setKi(double Ki){
+  if(Ki > 0)
+    this->Ki = Ki;
+}
+void robot::movilidad::setKd(double Kd){
+  if(Kd > 0)
+    this->Kd = Kd;
+}
+void robot::movilidad::setConstantesPid(double Kp, double Ki, double Kd){
+  setKp(Kp);
+  setKi(Ki);
+  setKd(Kd);
+}
 
 inline void robot::movilidad::setVelocidad(int nueva_velocidad){
-	velocidad = (nueva_velocidad >= minVelo && nueva_velocidad <= maxVelo)?nueva_velocidad:velocidad;
-  vel_der = velocidad;
-  vel_izq = velocidad;
-  n = 0;
-  n1 = 0;
-  v = false;
-  v1 = false;
+	velocidad_requerida = (nueva_velocidad >= min_velo && nueva_velocidad <= max_velo)?nueva_velocidad:velocidad_requerida;
+
   switch(ult_mov){
     case mov_adelante:
       adelante();

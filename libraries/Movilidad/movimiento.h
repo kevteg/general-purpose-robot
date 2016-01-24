@@ -10,20 +10,22 @@
 #include <adafruit_control_motor.h> /*Controlador del motor usando la librería de adafruit */
 #include <control_motor.h> 			/*Definición de controlador del motor*/
 #include <Arduino.h>
-#define maxVelo 255					/*Máxima velocidad +/- maxVelo*/
-#define minVelo 55					/*Minima velocidad +/- minVelo*/
-#define noVelocidad 0				/*Velocidad 0 para detener el robot*/
+#define max_velo 20					/*Máxima velocidad +/- maxVelo*/
+#define min_velo 3					/*Minima velocidad +/- minVelo*/
+#define zero_pwm 0				/*Velocidad 0 para detener el robot*/
 #define c_movimiento 11.30973 //Esta constante es 2*pi*diamétro de las ruedas, para calculas el movimiento de cada rueda
+#define tiempo_verificacion 100
+#define altos_rueda 6
 /*Estos datos se obtienen estudiando por separado cada sensor para verficar el tiempo que tarda en descargarse el capacitor*/
 /*Nota importante: los valores pueden cambiar si las distancias varian. Hay que asegurarse que esten bien*/
-#define min_v_blanco_en_der 5
-#define max_v_blanco_en_der 100
-#define min_v_negro_en_der 200
-#define max_v_negro_en_der 2000
+#define min_v_blanco_en_der 10
+#define max_v_blanco_en_der 50
+#define min_v_negro_en_der 100
+#define max_v_negro_en_der 500
 
-#define min_v_blanco_en_izq 39
+#define min_v_blanco_en_izq 10
 #define max_v_blanco_en_izq 65
-#define min_v_negro_en_izq 199
+#define min_v_negro_en_izq 100
 #define max_v_negro_en_izq 501
 /*Nota: por defecto el robot comenzará moviéndose hacia adelante*/
 namespace robot{
@@ -40,13 +42,19 @@ namespace robot{
 			int pin_izquierdo;
 			int pin_en_derecho;
 			int pin_en_izquierdo;
-			int velocidad;
-			int vel_der;
-			int vel_izq;
+			int pwm_der;
+			int pwm_izq;
+			double last_error_d, last_error_i;
 			double tiempo, tiempo_inicio;
 			double tiempo_v, tiempo_inicio_v;
-			bool v, v1;
-			int n, n1;
+			int velocidad_requerida;
+			int velocidad_verdadera;
+			int v, v1;
+			int conteo_der, conteo_izq;
+			float Kp;
+			float Kd;
+			float Ki;
+			double integral_d, integral_i;
 			enum movimientos{
 							mov_adelante,
 							mov_atras,
@@ -57,27 +65,59 @@ namespace robot{
 			movimientos ult_mov;
 		public:
 			/**
-			 * @brief Primer constructor de la clase.
-			 * @param puertoDerecho, puerto izquierdo.
-			 *  	  Puerto de los motores en la tarjeta de motores.
-			 *		  Valor por defecto de la velocidad maxVelo.
-			 */
-			 movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derecho, int pin_en_izquierdo);
-			/**
 			 * @brief Segundo constructor de la clase.
 			 * @param puertoDerecho, puerto izquierdo, velocidad.
 			 *  	  Puerto de los motores en la tarjeta de motores.
 			 *		  Velocidad de los motores.
-			 *		  Entre 155 y 255.
+			 *		  Entre 3 cm/s y 20 cm/s
 			 */
-			 movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derecho, int pin_en_izquierdo, int velocidad);
+			 movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derecho, int pin_en_izquierdo, int velocidad = min_velo);
+			 /**
+ 			 * @brief Conteo encoder derecho
+ 			 *        Se llama a esta librería cuando el pin del motor derecho cambia de 1 a 0,
+			 *        lo cual significa que ha habido un cambio
+ 			 */
 			 void conteo_en_der();
+			 /**
+ 			 * @brief Conteo encoder izquierdo
+ 			 *        Se llama a esta librería cuando el pin del motor izquierdo cambia de 1 a 0,
+			 *        lo cual significa que ha habido un cambio
+ 			 */
 			 void conteo_en_izq();
-			 void activarInterrupcion();
-			 void verificarVelocidades();
+			 /**
+ 			 * @brief Esta función incrementa los conteos de los motores cada vez que se pasa
+			 * sobre un espacio blanco en el encoder
+ 			 */
+			 void conteoRevoluciones();
+			 /**
+ 			 * @brief Este método prepara los sensores para obtener una respuesta
+			 * (que será capturada por los métodos conteo_en_izq y conteo_en_der)
+ 			 */
 			 void activarSensores();
-			 void rectificacion(double v_r_der, double v_r_izq);
+			 /**
+ 			 * @brief Este método cambia los pwm de los dos motores a lo que este en pwm_der y pwm_izq
+ 			 */
 			 void actMov();
+			 /**
+ 			 * @brief Se calcula la velocidad en cm/s de cada motor
+			 * @return retorna las velocidades de ambos motores como un vector
+ 			 */
+			 double* calculoVelocidad();
+			 /**
+ 			 * @brief  Calcula el nuevo pwm para cualquier motor
+			 * @return el nuevo pwm para el motor en turno
+			 * @param pwm_act: pwm actual del motor que se vaya a analizar
+			 *        vel_req: velocidad que se desea alcanzar
+			 *        vel_act: velocidad actual real
+			 *        last_error: error anterior del pid del motor en cuestión
+			 *        integral: resultado del control integral anterior del motor
+ 			 */
+			 int updatePid(int pwm_act, int vel_req, double vel_act, double* last_error, double *integral);
+			 /**
+ 			 * @brief Aquí se lleva el tiempo para las verificaciones de los motores
+			 * se censan las velocidades y se corrigen con updatePid
+ 			 */
+			 void proceso();
 			/**
 			 * @brief Dirección: derecha.
 			 * 		  Motor derecho hacia atrás y motor izquierdo hacia adelante
@@ -112,8 +152,48 @@ namespace robot{
 			 *		  Nota: el robot de mantiene detenido hasta recibir otra orden
 			 */
 			void detener();
+			/**
+			* @brief Pin encoder derecho
+			* @return Se retorna el pin del encoder derecho
+			*/
 			int getPinEnDer();
+			/**
+			* @brief Pin encoder izquierdo
+			* @return Se retorna el pin del encoder izquierda
+			*/
 			int getPinEnIzq();
+			/**
+			* @brief Constante proporcional
+			* @return Se retorna la constante proporcional actual
+			*/
+			double getKp();
+			/**
+			* @brief Constante integral
+			* @return Se retorna la constante integral actual
+			*/
+			double getKi();
+			/**
+			* @brief Constante derivativa
+			* @return Se retorna la constante derivativa actual
+			*/
+			double getKd();
+			/**
+			* @brief cambiar constante proporcional
+			*/
+			void setKp(double Kp);
+			/**
+			* @brief cambiar constante integral
+			*/
+			void setKi(double Ki);
+			/**
+			* @brief cambiar constante derivativa
+			*/
+			void setKd(double Kd);
+			/**
+			* @brief cambiar todas las constantes del pid
+			*/
+			void setConstantesPid(double Kp, double Ki, double Kd);
+
 			/**
 			 * @brief Cambiar velocidad actual del robot
 			 * @param nuevaVelocidad, nueva velocidad de los motores

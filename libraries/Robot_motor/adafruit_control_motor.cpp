@@ -5,8 +5,6 @@ robot::Motor::Motor(int number, int actual_speed) : controladorMotor(), motor(nu
 	setSpeed(actual_speed);
 }
 
-robot::Motor::Motor(int number) : controladorMotor(), motor(number), actual_speed(0){}
-
 void robot::Motor::setSpeed(int speed){
 	actual_speed = speed;
 	if (speed >= 0) {
@@ -18,7 +16,6 @@ void robot::Motor::setSpeed(int speed){
 	}
 }
 
-inline int robot::Motor::getSpeed(){ 
+inline int robot::Motor::getSpeed(){
 	return actual_speed;
 }
-

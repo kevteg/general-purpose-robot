@@ -6,7 +6,7 @@
 #ifndef  ROBOT_ADAFRUIT_CONTROL_MOTOR_H
 #define ROBOT_ADAFRUIT_CONTROL_MOTOR_H
 /*
-*Nota, lo pongo aquí (AFMotor) porque el compilador es un poco primitivo y si solo llamo esa libreria 
+*Nota, lo pongo aquí (AFMotor) porque el compilador es un poco primitivo y si solo llamo esa libreria
 *en un lugar (aqui o en el .ino) el cpp no reconoce al objeto de tipo AF_DCMotor
 */
 #include <AFMotor.h>
@@ -23,12 +23,7 @@
 				 * @brief Segundo constructor de la clase.
 				 * @param número del motor a controlar de 1 a 4, velocidad inicial (-255 a 255).
 				 */
-				Motor(int number, int actual_speed);
-				/**
-				 * @brief Tercer constructor de la clase.
-				 * @param número del motor a controlar de 1 a 4.
-				 */
-				Motor(int number);
+				Motor(int number, int actual_speed = 0);
 				/**
 				 * @brief Cambiar la velocidad actual del motor
 				 * @param speed: nueva velocidad
@@ -40,7 +35,7 @@
 				 */
 				inline int getSpeed();
 		};
-		
+
 	};
-	
+
 #endif
