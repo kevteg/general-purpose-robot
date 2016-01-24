@@ -5,18 +5,25 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
-movilidad	KEYWORD1	
+movilidad	KEYWORD1
 
 #######################################
 # Métodos y funciones (KEYWORD2)
 #######################################
 
-derecha 	 KEYWORD2
-izquierda 	 KEYWORD2
-adelante 	 KEYWORD2
-atras 		 KEYWORD2
-detener 	 KEYWORD2
-setVelocidad KEYWORD2
+derecha 	         KEYWORD2
+izquierda          KEYWORD2
+adelante 	         KEYWORD2
+atras 		         KEYWORD2
+detener 	         KEYWORD2
+setVelocidad       KEYWORD2
+conteoRevoluciones KEYWORD2
+proceso            KEYWORD2
+activarSensores    KEYWORD2
+getPinEnDer        KEYWORD2
+getPinEnIzq        KEYWORD2
+conteo_en_der      KEYWORD2
+conteo_en_izq      KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
