@@ -5,9 +5,18 @@ robot::movilidad::movilidad(int pin_derecho, int pin_izquierdo, int pin_en_derec
  motor_izquierdo(pin_izquierdo),
  pin_en_derecho(pin_en_derecho),
 pin_en_izquierdo(pin_en_izquierdo){
-  Kp = 0.5;
-  Kd = 0.5;
-  Ki = 0.5;
+  Kp_i = 0.8;
+  Kd_i = 1.4;
+  Ki_i = 0;
+  Kp_d = 0.55;
+  Kd_d = 1.1;
+  Ki_d = 0;
+  pwm_der = 0;
+  pwm_izq = 0;
+  last_error_d = 0;
+  last_error_i = 0;
+  integral_d = 0;
+  integral_i = 0;
   detener();
   setVelocidad(velocidad);
 }
@@ -48,13 +57,31 @@ void robot::movilidad::conteoRevoluciones(){
 void robot::movilidad::proceso(){
 
   if(ult_mov != mov_detener){
-    double* velocidades = calculoVelocidad();
+
     tiempo_v = millis() - tiempo_inicio_v;
     if(tiempo_v > tiempo_verificacion){
+      double velocidad_d = calculoVelocidad(1);
+      double velocidad_i = calculoVelocidad(2);
+      distancia_promedio = (distancia_d + distancia_i)/2;
+      /*A partir de 30 cm es muy posible que falle gracias a los sensores, por lo que se reinicia*/
+      /*pwm_der = updatePid(Kp_d, Kd_d, Ki_d, pwm_der, velocidad_requerida, (baux && (millis() - tiempo_inicio) > 1000)?va_d:velocidad_d, &last_error_d, &integral_d);
+      pwm_izq = updatePid(Kp_i, Kd_i, Ki_i,pwm_izq, velocidad_requerida, (baux && (millis() - tiempo_inicio) > 1000)?va_i:velocidad_i, &last_error_i, &integral_i);*/
+      pwm_der = updatePid(Kp_d, Kd_d, Ki_d, pwm_der, velocidad_requerida, velocidad_d, &last_error_d, &integral_d);
+      pwm_izq = updatePid(Kp_i, Kd_i, Ki_i,pwm_izq, velocidad_requerida, velocidad_i, &last_error_i, &integral_i);
+      if(distancia_promedio > 30){
+        conteo_izq = 0;
+        conteo_der = 0;
+        tiempo_inicio = millis();
+        va_d = velocidad_d;
+        va_i = velocidad_i;
+        last_error_d = 0;
+        last_error_i = 0;
+        integral_d = 0;
+        integral_i = 0;
+        Serial.println("##########################################################################");
+      }
 
 
-      pwm_der = updatePid(pwm_der, velocidad_requerida, velocidades[0], &last_error_d, &integral_d);
-      pwm_izq = updatePid(pwm_izq, velocidad_requerida, velocidades[1], &last_error_i, &integral_i);
 
       Serial.print("----------------------------------------------------------------");
       Serial.print(pwm_der);
@@ -66,33 +93,55 @@ void robot::movilidad::proceso(){
     }
   }
 }
-double* robot::movilidad::calculoVelocidad(){
-  double velocidades[2];
+double robot::movilidad::calculoVelocidad(int mot){
+  double velocidad;
   tiempo = millis() - tiempo_inicio;
-  velocidades[0] =  ((c_movimiento / altos_rueda)*conteo_der) / ((tiempo) / double(1000));
-  velocidades[1] =   ((c_movimiento / altos_rueda)*conteo_izq) / ((tiempo) / double(1000));
 
-  Serial.print(  velocidades[0]);
-  Serial.print(" ");
-  Serial.println(  velocidades[1]);
+  if(mot == 1){
+    distancia_d = ((c_movimiento / altos_rueda)*conteo_der);
+    velocidad =  (distancia_d / ((tiempo) / double(1000)));
+  }else{
+    distancia_i = ((c_movimiento / altos_rueda)*conteo_izq);
+    velocidad =   (distancia_i / ((tiempo) / double(1000)));
+  }
 
-
-//  conteo_der = 0;
-//  conteo_izq = 0;
-  return velocidades;
+  return velocidad;
 }
-int robot::movilidad::updatePid(int pwm_act, int vel_req, double vel_act, double* last_error, double *integral){
-  float term_pid = 0;                                                           
-  double error=0;
+int robot::movilidad::updatePid(double Kp, double Kd, double Ki, int pwm_act, int vel_req, double vel_act, double* last_error, double *integral){
+  double error = 0;
+  double term_pid = 0;
   error = static_cast<double>(vel_req) - vel_act;
-  //Control Pid
-  *integral += Ki*(error*(tiempo_verificacion / 1000));
-  term_pid = (Kp * error)
-            + *integral
-            + ((Kd/(tiempo_verificacion / 1000)) * (error - *last_error));
+  //if(abs(error) > 1){
+    double tp, td, ti;
+    //Control Pid
+    *integral += Ki*(static_cast<double>(tiempo_verificacion) / static_cast<double>(1000))*(error);
+    tp = (Kp * error);
+    ti = *integral;
+    td = Kd/(static_cast<double>(tiempo_verificacion) / static_cast<double>(1000)) * (error - *last_error);
 
-  *last_error = error;
-  return constrain(pwm_act + int(term_pid), 55, 255);
+    term_pid = tp
+              + ti
+              + td;
+
+    Serial.print("Error: ");
+    Serial.println(error);
+    Serial.print("vel req: ");
+    Serial.println(vel_req);
+    Serial.print("vel act: ");
+    Serial.println(vel_act);
+
+    Serial.print("Tp: ");
+    Serial.println(tp);
+    Serial.print("Ti: ");
+    Serial.println(ti);
+    Serial.print("Td: ");
+    Serial.println(td);
+    Serial.print("tpid: ");
+    Serial.println(term_pid);
+    Serial.println("---------");
+    *last_error = error;
+  //}
+  return constrain(pwm_act + int(term_pid), 10, 255);
 }
 void robot::movilidad::conteo_en_der() {
   tiempo_en_der = micros() - tiempo_ini_en_der;
@@ -137,8 +186,6 @@ void robot::movilidad::adelante(){
   last_error_i = 0;
   integral_d = 0;
   integral_i = 0;
-  pwm_der = 0;
-  pwm_izq = 0;
   tiempo_inicio_v = millis();
   tiempo_inicio = millis();
   ult_mov = mov_adelante;
@@ -160,10 +207,11 @@ void robot::movilidad::atras(){
 }
 
 void robot::movilidad::detener(){
-  conteo_der = 0;
+  /*conteo_der = 0;
   conteo_izq = 0;
   v = 2;
-  v1 = 2;
+  v1 = 2;*/
+
   ult_mov = mov_detener;
   actMov();
 }
@@ -181,7 +229,7 @@ int robot::movilidad::getPinEnDer(){
 int robot::movilidad::getPinEnIzq(){
   return pin_en_izquierdo;
 }
-double robot::movilidad::getKp(){
+/*double robot::movilidad::getKp(){
   return Kp;
 }
 double robot::movilidad::getKi(){
@@ -206,7 +254,7 @@ void robot::movilidad::setConstantesPid(double Kp, double Ki, double Kd){
   setKp(Kp);
   setKi(Ki);
   setKd(Kd);
-}
+}*/
 
 inline void robot::movilidad::setVelocidad(int nueva_velocidad){
 	velocidad_requerida = (nueva_velocidad >= min_velo && nueva_velocidad <= max_velo)?nueva_velocidad:velocidad_requerida;
