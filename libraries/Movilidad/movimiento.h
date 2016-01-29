@@ -13,9 +13,12 @@
 #define max_velo 20					/*Máxima velocidad +/- maxVelo*/
 #define min_velo 3					/*Minima velocidad +/- minVelo*/
 #define zero_pwm 0				/*Velocidad 0 para detener el robot*/
-#define c_movimiento 11.30973 //Esta constante es 2*pi*diamétro de las ruedas, para calculas el movimiento de cada rueda
-#define tiempo_verificacion 100
-#define altos_rueda 7
+#define c_movimiento 11.30973 //Esta constante es 2*pi*radio de las ruedas, para calculas el movimiento de cada rueda
+#define tiempo_verificacion 50
+#define altos_rueda 6
+#define distancia_reinicio 30 //Se reinicia el pid cada que pasa esta distancia en centimétros
+#define cir_robot 24.5044227  //7.8 (L) * pi
+#define velocidad_giro 5.0
 /*Estos datos se obtienen estudiando por separado cada sensor para verficar el tiempo que tarda en descargarse el capacitor*/
 /*Nota importante: los valores pueden cambiar si las distancias varian. Hay que asegurarse que esten bien*/
 #define min_v_blanco_en_der 10
@@ -27,6 +30,9 @@
 #define max_v_blanco_en_izq 65
 #define min_v_negro_en_izq 100
 #define max_v_negro_en_izq 501
+
+#define debug true
+#define reinicio_30_cm false
 /*Nota: por defecto el robot comenzará moviéndose hacia adelante*/
 namespace robot{
 	class movilidad{
@@ -48,6 +54,9 @@ namespace robot{
 			double tiempo, tiempo_inicio;
 			double tiempo_v, tiempo_inicio_v;
 			double distancia_promedio;
+			double distancia_promedio_total;
+			double distancia_anterior;
+			double distancia_recorrer;
 			double distancia_d;
 			double distancia_i;
 			int velocidad_requerida;
@@ -56,9 +65,8 @@ namespace robot{
 			int conteo_der, conteo_izq;
 			double Kp_d, Kp_i;
 			double Kd_d, Kd_i;
-			double Ki_d, Ki_i;
-			double integral_d, integral_i;
-			double va_d, va_i;
+			double tiempo_giro, tiempo_inicio_giro;
+			double tiempo_por_girar;
 			enum movimientos{
 							mov_adelante,
 							mov_atras,
@@ -116,40 +124,41 @@ namespace robot{
 			 *        last_error: error anterior del pid del motor en cuestión
 			 *        integral: resultado del control integral anterior del motor
  			 */
-			 int updatePid(double Kp, double Kd, double Ki, int pwm_act, int vel_req, double vel_act, double* last_error, double *integral);
+			 int updatePid(double Kp, double Kd, int pwm_act, int vel_req, double vel_act, double* last_error);
 			 /**
  			 * @brief Aquí se lleva el tiempo para las verificaciones de los motores
 			 * se censan las velocidades y se corrigen con updatePid
  			 */
 			 void proceso();
+			 void control(double velocidad_d, double velocidad_i, double distancia_promedio, double velocidad_requerida);
 			/**
 			 * @brief Dirección: derecha.
 			 * 		  Motor derecho hacia atrás y motor izquierdo hacia adelante
 			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
-			 *		  Nota: el robot de mantiene girando hasta recibir otra orden
+			 *
 			 */
-			void derecha();
+			void derecha(double theta);
 			/**
 			 * @brief Dirección: izquierda.
 			 * 		  Motor derecho hacia adelante y motor izquierdo hacia atrás
 			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
-			 *		  Nota: el robot de mantiene girando hasta recibir otra orden
+			 *
 			 */
-			void izquierda();
+			void izquierda(double theta);
 			/**
 			 * @brief Dirección: adelante.
 			 * 		  Motor derecho hacia adelante y motor izquierdo hacia adelante
 			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene yendo al frente hasta recibir otra orden
 			 */
-			void adelante();
+			void adelante(double distancia_recorrer);
 			/**
 			 * @brief Dirección: atrás.
 			 * 		  Motor derecho hacia atrás y motor izquierdo hacia atrás
 			 *		  Ambos motores a la misma velocidad, definida por el usuario o, por defecto maxVelo
 			 *		  Nota: el robot de mantiene yendo atrás hasta recibir otra orden
 			 */
-			void atras();
+			void atras(double distancia_recorrer);
 			/**
 			 * @brief Robot detenido.
 			 * 		  Motor derecho e izquierdo a velocidad 0
@@ -167,36 +176,50 @@ namespace robot{
 			*/
 			int getPinEnIzq();
 			/**
-			* @brief Constante proporcional
+			* @brief Constante proporcional motor derecho
 			* @return Se retorna la constante proporcional actual
 			*/
-			double getKp();
+			double getKpDer();
 			/**
-			* @brief Constante integral
-			* @return Se retorna la constante integral actual
-			*/
-			double getKi();
-			/**
-			* @brief Constante derivativa
+			* @brief Constante derivativa motor derecho
 			* @return Se retorna la constante derivativa actual
 			*/
-			double getKd();
+			double getKdDer();
 			/**
-			* @brief cambiar constante proporcional
+			* @brief cambiar constante proporcional motor derecho
 			*/
-			void setKp(double Kp);
+			void setKpDer(double Kp);
+
 			/**
-			* @brief cambiar constante integral
+			* @brief cambiar constante derivativa motor derecho
 			*/
-			void setKi(double Ki);
+			void setKdDer(double Kd);
 			/**
-			* @brief cambiar constante derivativa
+			* @brief cambiar todas las constantes del pid motor derecho
 			*/
-			void setKd(double Kd);
+			void setConstantesPdDer(double Kp, double Kd);
 			/**
-			* @brief cambiar todas las constantes del pid
+			* @brief Constante proporcional motor izquierdo
+			* @return Se retorna la constante proporcional actual
 			*/
-			void setConstantesPid(double Kp, double Ki, double Kd);
+			double getKpIzq();
+			/**
+			* @brief Constante derivativa motor izquierdo
+			* @return Se retorna la constante derivativa actual
+			*/
+			double getKdIzq();
+			/**
+			* @brief cambiar constante proporcional motor izquierdo
+			*/
+			void setKpIzq(double Kp);
+			/**
+			* @brief cambiar constante derivativa motor izquierdo
+			*/
+			void setKdIzq(double Kd);
+			/**
+			* @brief cambiar todas las constantes del pid motor izquierdo
+			*/
+			void setConstantesPdIzq(double Kp, double Kd);
 
 			/**
 			 * @brief Cambiar velocidad actual del robot
