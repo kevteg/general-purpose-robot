@@ -176,7 +176,10 @@ void robot::movilidad::derecha(double theta){
   pwm_der = 50;
   pwm_izq = 50;
   tiempo_por_girar = (theta / 360) * (cir_robot / velocidad_giro);
-  Serial.println(tiempo_por_girar);
+  #if debug
+    Serial.print("Tiempo a girar: ");
+    Serial.println(tiempo_por_girar);
+  #endif
   ult_mov = mov_derecha;
 }
 
@@ -187,7 +190,10 @@ void robot::movilidad::izquierda(double theta){
   pwm_der = 50;
   pwm_izq = 50;
   tiempo_por_girar = (theta / 360) * (cir_robot / velocidad_giro);
-  Serial.println(tiempo_por_girar);
+  #if debug
+    Serial.print("Tiempo a girar: ");
+    Serial.println(tiempo_por_girar);
+  #endif
   ult_mov = mov_izquierda;
 }
 
