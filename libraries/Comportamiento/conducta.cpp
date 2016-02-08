@@ -1,40 +1,28 @@
 #include "conducta.h"
-robot::comportamiento::comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int velocidad_ini, int trigger_pin, int echo_pin, int max_distan_us, int pin_sir1, int pin_sir2) :
-movimiento(pin_motor_d, pin_motor_i, velocidad_ini), sensor_ultra(trigger_pin, echo_pin, max_distan_us),
-promedio_distancia(max_distan_us), sensor_infrarojo(pin_sir1, pin_sir2), nombre_robot(nombre_robot){
-  movimiento.detener();
+robot::comportamiento::comportamiento(char nombre_robot,
+                                      int pin_motor_d,
+                                      int pin_motor_i,
+                                      int velocidad_ini,
+                                      int dist_sen_pin,
+                                      int max_distan_sd,
+                                      int pin_sir1,
+                                      int pin_sir2,
+                                      int pin_en_der,
+                                      int pin_en_izq) :
+                                      movimiento(pin_motor_d, pin_motor_i, pin_en_der, pin_en_izq, velocidad_ini),
+                                      sensor_dist(dist_sen_pin, max_distan_sd),
+                                      promedio_distancia(max_distan_sd),
+                                      SENSOR_INFRAojo(pin_sir1, pin_sir2),
+                                      nombre_robot(nombre_robot)
+                                      {
+  /*Tiempos para cambios en las rutinas de comportamientos básicos*/
   cambio_movimiento_eva = t_espera_max;
   cambio_rutina_vag = t_espera_min;
+  /*Los pines de los leds estan uno al lado del otro*/
   for (int i = 0; i < numero_leds; i++)
       pinMode(led_verde + i, OUTPUT);
-  /*Para indicar que se esta calibrando se encienden ambos leds*/
-  digitalWrite(led_verde, LOW);
-  digitalWrite(led_rojo, LOW);
-  led_encendido = ningun_led;
-  n_veces_exc       = new int[numero_excepciones];
-  _excepcion_sensor = new bool[numero_excepciones];
-  activar_excepcion = new bool[numero_excepciones];
-  for(int i = 0; i < numero_excepciones; i++){
-    n_veces_exc[i] = 0;
-    _excepcion_sensor[i] = false;
-    activar_excepcion[i] = true; //Por defecto las excepciones están encendidas
-  }
-  robot_calibrado = false;
-  estado_ini_r = e_esperando; //Por defecto al menos que se indique lo contrario al iniciar el robot
-}
+  encenderLed(ningun_led);
 
-robot::comportamiento::comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int trigger_pin, int echo_pin, int pin_sir1, int pin_sir2) :
-movimiento(pin_motor_d, pin_motor_i, velocidad_defecto_motores), sensor_ultra(trigger_pin, echo_pin, max_distancia_ultrasonido),
-promedio_distancia(max_distancia_ultrasonido), sensor_infrarojo(pin_sir1, pin_sir2), nombre_robot(nombre_robot){
-  movimiento.detener();
-  cambio_movimiento_eva = t_espera_max;
-  cambio_rutina_vag = t_espera_min;
-  for (int i = 0; i < numero_leds; i++)
-    pinMode(led_verde + i, OUTPUT);
-  /*Para indicar que se esta calibrando se encienden ambos leds*/
-  digitalWrite(led_verde, LOW);
-  digitalWrite(led_rojo, LOW);
-  led_encendido = ningun_led;
   n_veces_exc       = new int[numero_excepciones];
   _excepcion_sensor = new bool[numero_excepciones];
   activar_excepcion = new bool[numero_excepciones];
@@ -59,16 +47,14 @@ void robot::comportamiento::run(){
   int distancia;
   unsigned int posicion;
 
-  //Las excepeciones no estan activas hasta que el robot este calibrado
+  /*Las excepeciones no estan activas hasta que el robot este calibrado*/
   if(robot_calibrado){
-    if(activar_excepcion[sensor_ultras])
-      distancia = promedio_distancia.add(sensor_ultra.getDistance());
-    if(activar_excepcion[sensor_infrar]){
-      posicion = sensor_infrarojo.lectura(); //Posición de una linea relativo al sensor ir
+    if(activar_excepcion[SENSOR_DIST])
+      distancia = promedio_distancia.add(sensor_dist.getDistance());
+    if(activar_excepcion[SENSOR_INFRA]){
+      posicion = SENSOR_INFRAojo.lectura(); //Posición de una linea relativo al sensor ir
       for(int i = 0; i < numero_sensores_ir; i++)
-        lectura_sensores_ir[i] = sensor_infrarojo.valorSensor(i);
-      /*Serial.println(lectura_sensores_ir[0]);
-      Serial.println(lectura_sensores_ir[1]); */
+        lectura_sensores_ir[i] = SENSOR_INFRAojo.valorSensor(i);
     }
     excepcion(distancia, lectura_sensores_ir[sensor_ir_izq], lectura_sensores_ir[sensor_ir_der]);
   }
@@ -90,38 +76,43 @@ void robot::comportamiento::run(){
     case e_vagar:
         tiempo_actual = millis();
         tiempo_transcurrido = tiempo_actual - tiempo_inicio;
-        if(tiempo_transcurrido >= cambio_rutina_vag*seg || (_excepcion_sensor[sensor_ultras] || _excepcion_sensor[sensor_infrar])){
+        if(tiempo_transcurrido >= cambio_rutina_vag*seg || (_excepcion_sensor[SENSOR_DIST] || _excepcion_sensor[SENSOR_INFRA])){
           _vagar();
           tiempo_inicio = tiempo_actual;
         }
     break;
   	case e_rutina:
-        if(_excepcion_sensor[sensor_ultras] || _excepcion_sensor[sensor_infrar]){
+        if(_excepcion_sensor[SENSOR_DIST] || _excepcion_sensor[SENSOR_INFRA])
              cambiarMovimiento(e_detenido);
-             if(led_encendido == led_verde)
-               cambioLed();
-        }
   	break;
     case e_calibrar:
       tiempo_actual = millis();
       tiempo_transcurrido = tiempo_actual - tiempo_inicio;
       if(tiempo_transcurrido >= tiempo_calibrar*seg){
           robot_calibrado = true;
+          encenderLed(ningun_led);
           cambiarComportamiento(estado_ini_r);
       }
     break;
   }
 }
-void robot::comportamiento::cambioLed(){
-  if(led_encendido != ningun_led){
-    led_encendido = (led_encendido == led_rojo || led_encendido == todos_leds)?led_verde:led_rojo;
-    digitalWrite(led_encendido, HIGH);
-    digitalWrite((led_encendido == led_verde)?led_rojo:led_verde, LOW);
-  }else{
-    led_encendido = todos_leds;
-    digitalWrite(led_verde, HIGH);
-    digitalWrite(led_rojo, HIGH);
+
+void robot::comportamiento::encenderLed(int led_a_encender){
+  switch (led_a_encender) {
+    case todos_leds:
+      digitalWrite(led_verde, HIGH);
+      digitalWrite(led_rojo, HIGH);
+    break;
+    case ningun_led:
+      digitalWrite(led_verde, LOW);
+      digitalWrite(led_rojo, LOW);
+    break;
+    default:
+      digitalWrite(led_a_encender, HIGH);
+      digitalWrite((led_a_encender == led_verde)?led_rojo:led_verde, LOW);
+    break;
   }
+}
 
 }
 void robot::comportamiento::_seguirLinea(unsigned int lectura_sensor_1, unsigned int lectura_sensor_2, unsigned int posicion_linea){}
@@ -293,11 +284,11 @@ void robot::comportamiento::ejecutarComando(String comando){
           switch(comando[5]){
             case excep_dist:
               mens_correcto = true;
-              activar_excepcion[sensor_ultras] = (comando[7] == '1')?true:false;
+              activar_excepcion[SENSOR_DIST] = (comando[7] == '1')?true:false;
             break;
             case excep_infra:
               mens_correcto = true;
-              activar_excepcion[sensor_infrar] = (comando[7] == '1')?true:false;
+              activar_excepcion[SENSOR_INFRA] = (comando[7] == '1')?true:false;
             break;
             default:
               enviarMensaje((String)nombre_robot +(String)separador + (String)error_comando);
@@ -333,62 +324,52 @@ void  robot::comportamiento::enviarMensaje(String mensaje){
   String envio = delimitador_i + mensaje + delimitador_f;
   Serial.print(envio);
 }
+
 void robot::comportamiento::excepcion(int distancia, unsigned int lectura_sensor_1, unsigned int lectura_sensor_2){
-  if(activar_excepcion[sensor_ultras]){
+  if(activar_excepcion[SENSOR_DIST]){
       if(distancia > MUY_CERCA){
-        _excepcion_sensor[sensor_ultras] = false;
-        if(n_veces_exc[sensor_ultras] > 0){
-          n_veces_exc[sensor_ultras]--;
+        _excepcion_sensor[SENSOR_DIST] = false;
+        if(n_veces_exc[SENSOR_DIST] > 0){
+          n_veces_exc[SENSOR_DIST]--;
           enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_dist + (String)separador + (String)'0');
-          if(led_encendido == led_rojo && !_excepcion_sensor[sensor_infrar])
-            cambioLed();
         }
 
       }else{
-        _excepcion_sensor[sensor_ultras] = true;
-        if(n_veces_exc[sensor_ultras] < num_envios_per){
-          n_veces_exc[sensor_ultras]++;
+        _excepcion_sensor[SENSOR_DIST] = true;
+        if(n_veces_exc[SENSOR_DIST] < num_envios_per){
+          n_veces_exc[SENSOR_DIST]++;
           enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_dist + (String)separador + (String)'1');
-          if(led_encendido == led_verde)
-            cambioLed();
         }
-
-
       }
   }else
-    _excepcion_sensor[sensor_ultras] = false;
+    _excepcion_sensor[SENSOR_DIST] = false;
 
-  if(activar_excepcion[sensor_infrar]){
-      if(lectura_sensor_1 > umbral_lectura_ir|| lectura_sensor_2 > umbral_lectura_ir){
-        _excepcion_sensor[sensor_infrar] = true;
-        if(n_veces_exc[sensor_infrar] < num_envios_per){
-          n_veces_exc[sensor_infrar]++;
+  if(activar_excepcion[SENSOR_INFRA]){
+      if(lectura_sensor_1 > umbral_lectura_ir || lectura_sensor_2 > umbral_lectura_ir){
+        _excepcion_sensor[SENSOR_INFRA] = true;
+        if(n_veces_exc[SENSOR_INFRA] < num_envios_per){
+          n_veces_exc[SENSOR_INFRA]++;
           enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_infra + (String)separador + (String)'1');
-          if(led_encendido == led_verde)
-            cambioLed();
         }
-
-
-      }else if(lectura_sensor_1 <= umbral_lectura_ir && lectura_sensor_2 <= umbral_lectura_ir){
-        _excepcion_sensor[sensor_infrar] = false;
-        if(n_veces_exc[sensor_infrar] > 0){
-          n_veces_exc[sensor_infrar]--;
+      }else{
+        _excepcion_sensor[SENSOR_INFRA] = false;
+        if(n_veces_exc[SENSOR_INFRA] > 0){
+          n_veces_exc[SENSOR_INFRA]--;
           enviarMensaje((String)nombre_robot + (String)separador + (String)set_excepcion + (String)separador + (String)excep_infra + (String)separador + (String)'0');
-          if(led_encendido == led_rojo && !_excepcion_sensor[sensor_ultras])
-            cambioLed();
         }
 
       }
   }else
-    _excepcion_sensor[sensor_infrar] = false;
+    _excepcion_sensor[SENSOR_INFRA] = false;
 
-  if((!activar_excepcion[sensor_ultras] || !activar_excepcion[sensor_infrar]) && (led_encendido == led_rojo))
-    cambioLed();
+  if(_excepcion_sensor[SENSOR_INFRA] || _excepcion_sensor[SENSOR_DIST])
+    encenderLed(led_rojo);
 }
+
 void robot::comportamiento::_vagar(){
   /*Vagar 1.0*/
   int nue_r;
-  if(_excepcion_sensor[sensor_ultras] || _excepcion_sensor[sensor_infrar])//Si el sensor de ultrasonido o el de distancia han generado una excepción
+  if(_excepcion_sensor[SENSOR_DIST] || _excepcion_sensor[SENSOR_INFRA])//Si el sensor de ultrasonido o el de distancia han generado una excepción
   /*Se envia un mensaje para ver que se vio y se pone en modo espera*/
   cambiarComportamiento(e_esperando);
   else{
@@ -414,8 +395,6 @@ void robot::comportamiento::_vagar(){
 }
 
 void robot::comportamiento::cambiarComportamiento(estado_r nuevo_estado){
-  if(led_encendido == led_rojo || led_encendido == todos_leds || (led_encendido == ningun_led && robot_calibrado) || nuevo_estado == e_calibrar)
-    cambioLed();
   if(nuevo_estado != e_rutina)
     for(int i = 0; i < numero_excepciones; i++)
       activar_excepcion[i] = true;
@@ -449,8 +428,9 @@ void robot::comportamiento::cambiarComportamiento(estado_r nuevo_estado){
   	break;
     case e_calibrar:
       tiempo_inicio = millis();
+      encenderLed(todos_leds);
       cambiarMovimiento(e_avanza);
-      sensor_infrarojo.calibrar();
+      SENSOR_INFRAojo.calibrar();
       estado_robot = e_calibrar;
     break;
   }
@@ -461,16 +441,16 @@ void robot::comportamiento::_evasionObstaculos(){
 if(estado_movimiento != e_detenido)
 	switch(estado_movimiento){
 		case e_vuelta_d: case e_vuelta_i: case e_atras:
-			if(!_excepcion_sensor[sensor_ultras]){
+			if(!_excepcion_sensor[SENSOR_DIST]){
 
 				movimiento.adelante();
 				estado_movimiento = e_avanza;
 			}
 		break;
 		case e_avanza:
-			if(_excepcion_sensor[sensor_ultras]){
+			if(_excepcion_sensor[SENSOR_DIST]){
         if(led_encendido == led_verde)
-          cambioLed();
+          encenderLed();
 					switch(tipo_evasion){
 						case 0:
 							movimiento.atras();

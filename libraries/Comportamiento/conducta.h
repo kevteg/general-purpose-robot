@@ -1,4 +1,4 @@
-/**
+ /**
  * @file comportamiento.h
  * @brief Librería de control del comportamiento del robot
  * @author Kevin Hernández, Ángel Gil
@@ -22,15 +22,15 @@
 #include <promedio.h>
 /*Definiciones*/
 #define MUY_CERCA                 15   //Distancia en cm
-#define max_distancia_ultrasonido 100  //Máxima distancia por defecto del ultrasonido en cm
-#define velocidad_defecto_motores 105  //Máxima velocidad por defecto de los motores
-#define velocidad_minima          55   //Velocidad minima
+#define max_distancia_sd          100  //Máxima distancia por defecto del sensor de distancia en cm
+#define velocidad_defecto_motores 20  //Máxima velocidad por defecto de los motores
+#define velocidad_minima          5   //Velocidad minima
 #define t_espera_min              5    //Tiempo de espera minimo para cualquier rutina
 #define t_espera_max              20   //Tiempo de espera máximo para cualquier rutina
 #define seg                       1000 //1 segundo (1000 ms)
 #define t_envio                   0.5  //Tiempo de envio de mensajes, medio segundo cada mensaje
 #define num_envios_per            5    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
-#define led_verde                 18   //Puerto del led verde
+#define led_verde                 18   //Puerto del led verde CAMBIAR CON LA NUEVA CONFIGURACIÓN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 #define led_rojo                  19   //Puerto del led rojo
 #define todos_leds                0    //Indica que todos los leds están encedidos
 #define ningun_led                -1   //Indica que no esta encendido ningún led, estado inicial
@@ -39,8 +39,8 @@
 #define sensor_ir_izq             0    //Posición del sensor ir de la izquierda en el vector de lecturas
 #define sensor_ir_der             1    //Posición del sensor ir de la derecha en el vector de lecturas
 #define umbral_lectura_ir         700  //Encima de este umbral se considera una línea negra
-#define sensor_ultras             0    //Posición en el vector de excepciones de la excepción de sensor ultrasonido
-#define sensor_infrar             1    //Posición en el vector de excepciones de la excepción de sensor infrarojo
+#define SENSOR_DIST               0    //Posición en el vector de excepciones de la excepción de sensor ultrasonido
+#define SENSOR_INFRA              1    //Posición en el vector de excepciones de la excepción de sensor infrarojo
 #define numero_excepciones        2    //Cantidad de excepciones que se tendrán
 #define baudios                   9600 //Baudios de la comunicación serial
 #define todos_robot               'X'  //Indica que la orden es para todos los robots
@@ -66,7 +66,7 @@
     class comportamiento{
 		private:
 			movilidad movimiento;
-			sensorUltra sensor_ultra;
+			sensorUltra sensor_dist;
 			qtr_sensor sensor_infrarojo;
 			promedioDinamico <int, 3> promedio_distancia;
       char nombre_robot;
@@ -101,7 +101,6 @@
               e_calibrar
 						  };
 			int tipo_evasion;
-      int led_encendido;              //Led encendido actualmente
       int cambio_movimiento_eva;      //Tiempo en el cual se cambia el movimiento en la rutina de evadir obstaculos
 			int cambio_rutina_vag;          //Tiempo en el cual se cambia el movimiento en la rutina de vagar
       int *n_veces_exc;               //Número de veces seguidas que ha se ha enviado la excepción
@@ -122,23 +121,14 @@
 			 *		  velocidad_ini: Velocidad inicial de los motores
 			 *  	  trigger_pin: Puerto trigger del sensor de ultrasonido
 			 *		  echo_pin: Puerto echo del sensor de ultrasonido
-			 *	      max_distan_us: Máxima distancia a medir por el sensor de ultrasonido
+			 *	    max_distan_us: Máxima distancia a medir por el sensor de ultrasonido
 			 *		  pin_sir1: Pin del sensor infrarojo 1
-			 *        pin_sir2: Pin del sensor infrarojo 2
+			 *      pin_sir2: Pin del sensor infrarojo 2
+       *      pin_en_der: Pin encoder derecho
+       *      ṕin_en_izq: Pin encoder izquierdo
 			 */
-			comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int velocidad_ini, int trigger_pin, int echo_pin, int max_distan_us, int pin_sir1, int pin_sir2);
-			/**
-			 * @brief Cuarto constructor de la clase.
-			 * @param pin_motor_d: Puerto a conectar el motor derecho
-			 *		  pin_motor_i: Puerto a conectar el motor izquierdo
-			 *		  trigger_pin: Puerto trigger del sensor de ultrasonido
-			 *		  echo_pin: Puerto echo del sensor de ultrasonido
-			 *		  pin_sir1: Pin del sensor infrarojo 1
-			 *        pin_sir2: Pin del sensor infrarojo 2
-			 *		  Nota: la velocidad inicial si no se indica será velocidad_defecto_motores.
-			 *		  Nota: la máxima distancia del sensor de ultrasonido será por defecto 200 cm.
-			 */
-			comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int trigger_pin, int echo_pin, int pin_sir1, int pin_sir2);
+			comportamiento(char nombre_robot, int pin_motor_d, int pin_motor_i, int velocidad_ini = velocidad_minima, int dist_sen_pin, int max_distan_sd = max_distancia_sd, int pin_sir1, int pin_sir2, int pin_en_der, int pin_en_izq);
+
       /**
       * @brief Interpretar los comandos que se reciben para cambiar el estado del robot
       */
@@ -199,7 +189,7 @@
       /**
       * @brief Cambiar el estado de los leds, apaga el led que este encendido y enciende el otro
       */
-      void cambioLed();
+      void encenderLed(int led_a_encender);
       /**
        * @brief Cambia la velocidad a la nueva que llega al robot
        *@param opc_1 primera opción de cambio de velocidad
