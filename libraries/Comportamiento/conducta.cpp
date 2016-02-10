@@ -31,6 +31,9 @@ robot::comportamiento::comportamiento(char nombre_robot,
     _excepcion_sensor[i] = false;
     activar_excepcion[i] = true; //Por defecto las excepciones están encendidas
   }
+  comando = new String[BUFFER_MENSAJES];
+  indice_c = 0;
+  en_comando = false;
   robot_calibrado = false;
   estado_ini_r = e_esperando; //Por defecto al menos que se indique lo contrario al iniciar el robot
 }
@@ -163,20 +166,39 @@ bool robot::comportamiento::_realizarRutina(char rutina){
 }
 
 void robot::comportamiento::escuchar(){
-  char c;
-  bool salir = false;
+ char c;
+ bool salir = false;
 
-  while(Serial.available() > 0 && !salir){
-    c = Serial.read();
-    if(comando[0] != delimitador_i){
-      salir = true;
-      comando = "";
+ while(Serial.available() > 0 && !salir){
+   c = Serial.read();
+   if(!enComando){
+     if(c == delimitador_i){
+       enComando = true;
+     }
+   }else{
+     if(i < BUFFER){
+       if(c == separador)
+         indice_c++;
+       else if(c == delimitador_f){
+         salir = true;
+         ejecutarComando(comando, indice_c + 1);
+         limpiarVarComando();
+       }else if(c == delimitador_i){
+         limpiarVarComando();
+         en_comando = true;
+       }else
+         comando[i] += c;
+     }else
+        limpiarVarComando();
     }
-    comando += c;
-  }
-  if(comando.length() > 0 && comando[0] == delimitador_i && comando[comando.length() -1 ] == delimitador_f){
-    ejecutarComando(comando);
-    comando = "";
+}
+void robot::comportamiento::ejecutarComando(String *comando, int tam){
+  if(!robot_calibrado)
+    cambiarComportamiento(e_calibrar);
+  else{
+    for(int i = 0; i < tam; i++){
+      
+    }
   }
 }
 void robot::comportamiento::ejecutarComando(String comando){
@@ -184,7 +206,7 @@ void robot::comportamiento::ejecutarComando(String comando){
   if(comando[1] == nombre_robot || comando[1] == todos_robot){
     if(!robot_calibrado)
       cambiarComportamiento(e_calibrar);
-
+//else
     switch(comando[3]){
       case vagar:{
         mens_correcto = true;

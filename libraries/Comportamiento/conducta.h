@@ -22,45 +22,46 @@
 #include <promedio.h>
 /*Definiciones*/
 #define MUY_CERCA                 15   //Distancia en cm
-#define max_distancia_sd          100  //Máxima distancia por defecto del sensor de distancia en cm
-#define velocidad_defecto_motores 20  //Máxima velocidad por defecto de los motores
-#define velocidad_minima          5   //Velocidad minima
-#define t_espera_min              5    //Tiempo de espera minimo para cualquier rutina
-#define t_espera_max              20   //Tiempo de espera máximo para cualquier rutina
-#define seg                       1000 //1 segundo (1000 ms)
-#define t_envio                   0.5  //Tiempo de envio de mensajes, medio segundo cada mensaje
-#define num_envios_per            5    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
-#define led_verde                 18   //Puerto del led verde CAMBIAR CON LA NUEVA CONFIGURACIÓN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-#define led_rojo                  19   //Puerto del led rojo
-#define todos_leds                0    //Indica que todos los leds están encedidos
-#define ningun_led                -1   //Indica que no esta encendido ningún led, estado inicial
-#define numero_sensores_ir        2    //Número de sensores infrarojos del robot por defecto
-#define numero_leds               2    //Número de leds del robot por defecto
-#define sensor_ir_izq             0    //Posición del sensor ir de la izquierda en el vector de lecturas
-#define sensor_ir_der             1    //Posición del sensor ir de la derecha en el vector de lecturas
-#define umbral_lectura_ir         700  //Encima de este umbral se considera una línea negra
+#define MAX_DIST_SD               100  //Máxima distancia por defecto del sensor de distancia en cm
+#define VELOCIDAD_MAXIMA          20  //Máxima velocidad por defecto de los motores
+#define VELOCIDAD_MINIMA          5   //Velocidad minima
+#define T_ESPERA_MIN              5    //Tiempo de espera minimo para cualquier rutina
+#define T_ESPERA_MAX              20   //Tiempo de espera máximo para cualquier rutina
+#define SEG                       1000 //1 segundo (1000 ms)
+#define T_ENVIO                   0.5  //Tiempo de envio de mensajes, medio segundo cada mensaje
+#define NUM_ENVIOS_PER            5    //Número de mensajes de excepeción que se envian cada vez que pasa la excepción
+#define LED_VERDE                 18   //Puerto del led verde CAMBIAR CON LA NUEVA CONFIGURACIÓN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#define LED_ROJO                  19   //Puerto del led rojo
+#define TODOS_LEDS                0    //Indica que todos los leds están encedidos
+#define NINGUN_LED                -1   //Indica que no esta encendido ningún led, estado inicial
+#define NUM_SENSORES_IR           2    //Número de sensores infrarojos del robot por defecto
+#define NUM_LEDS                  2    //Número de leds del robot por defecto
+#define SENSOR_IR_IZQ             0    //Posición del sensor ir de la izquierda en el vector de lecturas
+#define SENSOR_IR_DER             1    //Posición del sensor ir de la derecha en el vector de lecturas
+#define UMBRAL_LECTURA_IR         700  //Encima de este umbral se considera una línea negra
 #define SENSOR_DIST               0    //Posición en el vector de excepciones de la excepción de sensor ultrasonido
 #define SENSOR_INFRA              1    //Posición en el vector de excepciones de la excepción de sensor infrarojo
-#define numero_excepciones        2    //Cantidad de excepciones que se tendrán
-#define baudios                   9600 //Baudios de la comunicación serial
-#define todos_robot               'X'  //Indica que la orden es para todos los robots
-#define tiempo_calibrar           3    //Tiempo para calibrarse
-#define vagar                     'A'  //Vagar del protócolo
-#define evadir                    'B'  //Evadir del protócolo
-#define seguir_i                  'C'  //Seguir instrucciones del protócolo
-#define calibra                   'D'  //Calibrando en el protócolo
-#define esperar                   '!'  //Poner al robot en espera del protócolo
-#define buscar                    '?'  //Se pregunta por el robot, el robot envia un mensaje con lo que hace
-#define delimitador_i             '<'  //Delimitador inicial de mensajes
-#define delimitador_f             '>'  //Delimitaador final de mensajes
-#define separador                 ':'  //Separador de los mensajes
-#define excep_dist                '0'  //Mensaje de error en caso de generarse una excepción de distancia
-#define excep_infra               '1'  //Mensaje de error en caso de generarse una excepción de sensores
-#define error_comando             '_'  //Comando no reconocido (el robot lo envia)
-#define set_excepcion             'E'  //Para apagar las excepciones
-#define error_excep               '/'  //Sucede cuando el robot no puede apagar la excepcion (el robot lo envia)
-#define mensaje_recibido          '#'  //El robot lo envia cuando ha recibido correctamente una orden
-#define velocidad                 'V'  //Velocidad del robot
+#define NUM_EXCEPCIONES           2    //Cantidad de excepciones que se tendrán
+#define BAUDIOS                   9600 //Baudios de la comunicación serial
+#define TODOS_ROBOTS              'X'  //Indica que la orden es para todos los robots
+#define TIEMPO_CALIBRAR           3    //Tiempo para calibrarse
+#define CVAGAR                    'A'  //Vagar del protócolo
+#define CEVADIR                   'B'  //Evadir del protócolo
+#define CSEGUIR_I                 'C'  //Seguir instrucciones del protócolo
+#define CCALIBRA                  'D'  //Calibrando en el protócolo
+#define CESPERAR                  '!'  //Poner al robot en espera del protócolo
+#define CBUSCAR                   '?'  //Se pregunta por el robot, el robot envia un mensaje con lo que hace
+#define DELIMITADOR_I             '<'  //Delimitador inicial de mensajes
+#define DELIMITADOR_F             '>'  //Delimitaador final de mensajes
+#define SEPARADOR                 ':'  //Separador de los mensajes
+#define EX_DIST                   '0'  //Mensaje de error en caso de generarse una excepción de distancia
+#define EX_INFRA                  '1'  //Mensaje de error en caso de generarse una excepción de sensores
+#define ERROR_COMANDO             '_'  //Comando no reconocido (el robot lo envia)
+#define CEXCEPCION                'E'  //Para apagar las excepciones
+#define ERROR_EX                  '/'  //Sucede cuando el robot no puede apagar la excepcion (el robot lo envia)
+#define MENSAJE_RECIBIDO          '#'  //El robot lo envia cuando ha recibido correctamente una orden
+#define CVELOCIDAD                'V'  //Velocidad del robot
+#define BUFFER_MENSAJES           10   //Cantidad máxima de elementos que pueden llegar como comando
 
  namespace robot{
     class comportamiento{
@@ -69,6 +70,9 @@
 			sensorUltra sensor_dist;
 			qtr_sensor sensor_infrarojo;
 			promedioDinamico <int, 3> promedio_distancia;
+      bool en_comando;
+      int indice_c;
+      String *comando;
       char nombre_robot;
 			enum estado_m{
 						  e_vuelta_d,
@@ -133,6 +137,10 @@
       * @brief Interpretar los comandos que se reciben para cambiar el estado del robot
       */
       void ejecutarComando(String comando);
+      /**
+      * @brief Interpretar los comandos que se reciben para cambiar el estado del robot
+      */
+      void ejecutarComando(String *comando, int tam);
       /**
       * @brief Generar movimiento aleatorio para evitar obstaculos
       */
