@@ -7,7 +7,7 @@ promedio_distancia(max_distan_us), sensor_infrarojo(pin_sir1, pin_sir2), nombre_
   cambio_rutina_vag = t_espera_min;
   for (int i = 0; i < numero_leds; i++)
       pinMode(led_verde + i, OUTPUT);
-  /*Para indicar que se esta calibrando se encienden ambos leds*/
+  /*Para indicar que se esta calibrando se encienden ambos leds sdf*/
   digitalWrite(led_verde, LOW);
   digitalWrite(led_rojo, LOW);
   led_encendido = ningun_led;

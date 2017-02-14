@@ -4,17 +4,17 @@
 #include <adafruit_control_motor.h> 
 #include <control_motor.h>
 
-#define LRSPIN 2
+#define pin_s_ir 2
 using namespace robot;
 Motor _motor(4, 255);
 
-volatile boolean chargeRS;
-volatile unsigned long leftRSStartTime;     
-volatile unsigned long leftRSTimer;
+volatile boolean cargar_c;
+volatile unsigned long t_inicio_des;     
+volatile unsigned long t_des;
 unsigned int n;
 int v;
-void chargeRSISR() {      
-  chargeRS = true;      
+void activar_carga() {      
+  cargar_c = true;      
 }
 void conteo(){
   Timer1.detachInterrupt();
@@ -24,43 +24,42 @@ void conteo(){
   n = 0;
   Timer1.attachInterrupt(conteo);
 }
-void leftRSISR() {
-  leftRSTimer = micros() - leftRSStartTime;      
+void t_descarga() {
+  t_des = micros() - t_inicio_des;      
 }      
-
+void act_sensor(){
+    pinMode(pin_s_ir, OUTPUT);    // Se hace el pin del sensor un output      
+    digitalWrite(pin_s_ir, HIGH); // Se escribe un alto para que el capacitor del sensor comience a cargarse       
+  
+    delayMicroseconds(10);      // Se esperan 10ms a que se cargue      
+    
+    pinMode(pin_s_ir, INPUT);     // Se hace input de nuevo para calcular el tiempo de descarga    
+    t_inicio_des = micros();      //Tiempo de inicio de descarga      
+    cargar_c = false;    
+}
 void setup() {      
   n = 0;
   v = 0;
-  Serial.begin(57600);      
-  Serial.println("Starting...");      
-  
-  attachInterrupt(digitalPinToInterrupt(2), leftRSISR, FALLING);      
-  chargeRS = false;      
+  Serial.begin(57600);           
+  attachInterrupt(digitalPinToInterrupt(2), t_descarga, FALLING); //Cuando el pin del sensor vaya de HIGH a LOW se habra descargado el capacitor
+  cargar_c = false;      
   Timer1.initialize(1000000);
-  MsTimer2::set(2, chargeRSISR); // 2ms period
+  MsTimer2::set(2, activar_carga); // Cada 2ms se hace proceso para revisar información del sensor
   MsTimer2::start();      
   Timer1.attachInterrupt(conteo);
 }
 
 void loop() {
-  if (chargeRS) {      
-    pinMode(LRSPIN, OUTPUT);    // make line an output      
-    digitalWrite(LRSPIN, HIGH); // drive line high       
-  
-    delayMicroseconds(10);      // charge line      
-    
-    pinMode(LRSPIN, INPUT);     // make line an input      
-    leftRSStartTime = micros();            
-    chargeRS = false;      
-  }      
-  if (leftRSTimer) {      
-
-    if(leftRSTimer > 39 && leftRSTimer < 61){
+  if (cargar_c)       
+    act_sensor();
+       
+  if (t_des) {      
+    if(t_des > 39 && t_des < 61){
       if(v == 2)
         n++;
       v = 1;
-    }else if(leftRSTimer > 199 && leftRSTimer < 401)
+    }else if(t_des > 199 && t_des < 401)
       v = 2;
-    leftRSTimer = 0;      
+    t_des = 0;      
   }      
 }
